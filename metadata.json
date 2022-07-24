@@ -3,6 +3,6 @@
   "name": "AlphaTint",
   "description": "Artificially reduce brightness of your displays (including external monitors).\n\nIt is a fork of ColorTint modified to reduce brightness without an alpha channel.",
   "version": 3,
-  "shell-version": ["40", "41"],
+  "shell-version": ["40", "41", "42"],
   "url": "https://github.com/saifulbkhan/alpha-tint"
 }
