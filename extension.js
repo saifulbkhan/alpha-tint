@@ -4,6 +4,7 @@ const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
 const Main = imports.ui.main;
 const Gio = imports.gi.Gio;
+const GObject = imports.gi.GObject;
 const UiGroup = imports.ui.main.layoutManager.uiGroup;
 
 const Lang = imports.lang;
@@ -29,167 +30,178 @@ if (ShellVersion[1] === 2) {
   ExtensionPath =
     ExtensionSystem.extensionMeta["alphatint@saifulbkhan.github.com"].path;
 } else {
-  ExtensionPath = imports.misc.extensionUtils.getCurrentExtension().path;
+  ExtensionPath = ExtensionUtils.getCurrentExtension().path;
 }
 
-const AlphaTinter = new Lang.Class({
-  Name: "AlphaTinter",
-
-  // Create Tint Overlay
-  createOverlay: function () {
-    this._effect = new Clutter.BrightnessContrastEffect();
-    this.setOverlayBrightness();
+const AlphaTinter = GObject.registerClass(
+  {
+    GTypeName: "AlphaTinter",
   },
-
-  // Update color of overlay
-  setOverlayBrightness: function () {
-    this._effect.brightness = Clutter.Color.new(
-      overlay["brightness"],
-      overlay["brightness"],
-      overlay["brightness"],
-      255
-    );
-    if (overlay.active) {
-      UiGroup.remove_effect_by_name(BrightnessEffectName);
-      UiGroup.add_effect_with_name(BrightnessEffectName, this._effect);
+  class AlphaTinter extends GObject.Object {
+    // Create Tint Overlay
+    createOverlay() {
+      this._effect = new Clutter.BrightnessContrastEffect();
+      this.setOverlayBrightness();
     }
-    this.saveState();
-  },
 
-  // Hide overlay
-  hide: function () {
-    overlay.active = false;
-    UiGroup.remove_effect_by_name(BrightnessEffectName);
-    this.saveState();
-  },
+    // Update color of overlay
+    setOverlayBrightness() {
+      this._effect.brightness = Clutter.Color.new(
+        overlay["brightness"],
+        overlay["brightness"],
+        overlay["brightness"],
+        255
+      );
+      if (overlay.active) {
+        UiGroup.remove_effect_by_name(BrightnessEffectName);
+        UiGroup.add_effect_with_name(BrightnessEffectName, this._effect);
+      }
+      this.saveState();
+    }
 
-  // Show overlay
-  show: function () {
-    UiGroup.add_effect_with_name(BrightnessEffectName, this._effect);
-    overlay.active = true;
-    this.saveState();
-  },
+    // Hide overlay
+    hide() {
+      overlay.active = false;
+      UiGroup.remove_effect_by_name(BrightnessEffectName);
+      this.saveState();
+    }
 
-  // Load state
-  loadState: function () {
-    // Load last from json
-    this._file = Gio.file_new_for_path(ExtensionPath + "/settings.json");
-    if (this._file.query_exists(null)) {
-      let [flag, data] = this._file.load_contents(null);
+    // Show overlay
+    show() {
+      UiGroup.add_effect_with_name(BrightnessEffectName, this._effect);
+      overlay.active = true;
+      this.saveState();
+    }
 
-      if (flag) {
-        const ByteArray = imports.byteArray;
-        let prepData =
-          data instanceof Uint8Array
-            ? ByteArray.toString(data)
-            : data.toString();
-        overlay = JSON.parse(prepData);
+    // Load state
+    loadState() {
+      // Load last from json
+      this._file = Gio.file_new_for_path(ExtensionPath + "/settings.json");
+      if (this._file.query_exists(null)) {
+        let [flag, data] = this._file.load_contents(null);
+
+        if (flag) {
+          const ByteArray = imports.byteArray;
+          let prepData =
+            data instanceof Uint8Array
+              ? ByteArray.toString(data)
+              : data.toString();
+          overlay = JSON.parse(prepData);
+        }
       }
     }
-  },
 
-  // Save state
-  saveState: function () {
-    this._file = Gio.file_new_for_path(ExtensionPath + "/settings.json");
-    this._file.replace_contents(JSON.stringify(overlay), null, false, 0, null);
-  },
-
-  // Enable
-  start_up: function () {
-    overlay.active = false;
-    this.loadState();
-    this.createOverlay();
-  },
-
-  // Disable
-  stop_now: function () {
-    if (overlay.active == true) {
-      UiGroup.remove_effect_by_name(BrightnessEffectName);
+    // Save state
+    saveState() {
+      this._file = Gio.file_new_for_path(ExtensionPath + "/settings.json");
+      this._file.replace_contents(
+        JSON.stringify(overlay),
+        null,
+        false,
+        0,
+        null
+      );
     }
+
+    // Enable
+    start_up() {
+      overlay.active = false;
+      this.loadState();
+      this.createOverlay();
+    }
+
+    // Disable
+    stop_now() {
+      if (overlay.active == true) {
+        UiGroup.remove_effect_by_name(BrightnessEffectName);
+      }
+    }
+  }
+);
+
+const MenuButton = GObject.registerClass(
+  {
+    GTypeName: "MenuButton",
   },
-});
+  class MenuButton extends PanelMenu.Button {
+    // Constructor
+    _init() {
+      super._init(1, "AlphaTintMenu", false);
+      let box = new St.BoxLayout();
+      let icon = new St.Icon({
+        icon_name: "display-brightness-symbolic",
+        style_class: "system-status-icon",
+      });
 
-const MenuButton = new Lang.Class({
-  Name: "MenuButton",
-  Extends: PanelMenu.Button,
+      // We add the icon, the label and a arrow icon to the box
+      box.add(icon);
 
-  // Constructor
-  _init: function () {
-    this.parent(1, "AlphaTintMenu", false);
-    let box = new St.BoxLayout();
-    let icon = new St.Icon({
-      icon_name: "display-brightness-symbolic",
-      style_class: "system-status-icon",
-    });
+      // We add the box to the button
+      // It will be showed in the Top Panel
+      this.add_child(box);
 
-    // We add the icon, the label and a arrow icon to the box
-    box.add(icon);
+      let popupMenuExpander = new PopupMenu.PopupSubMenuMenuItem(
+        "PopupSubMenuMenuItem"
+      );
 
-    // We add the box to the button
-    // It will be showed in the Top Panel
-    this.add_child(box);
+      // This is an example of PopupMenuItem, a menu item. We will use this to add as a submenu
+      let submenu = new PopupMenu.PopupMenuItem("PopupMenuItem");
 
-    let popupMenuExpander = new PopupMenu.PopupSubMenuMenuItem(
-      "PopupSubMenuMenuItem"
-    );
+      // A new label
+      let label = new St.Label({ text: "Item 1" });
 
-    // This is an example of PopupMenuItem, a menu item. We will use this to add as a submenu
-    let submenu = new PopupMenu.PopupMenuItem("PopupMenuItem");
+      // Add the label and submenu to the menu expander
+      popupMenuExpander.menu.addMenuItem(submenu);
+      popupMenuExpander.menu.box.add(label);
 
-    // A new label
-    let label = new St.Label({ text: "Item 1" });
+      let offswitch = new PopupMenu.PopupSwitchMenuItem("Tint", overlay.active);
 
-    // Add the label and submenu to the menu expander
-    popupMenuExpander.menu.addMenuItem(submenu);
-    popupMenuExpander.menu.box.add(label);
+      this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+      this.menu.addMenuItem(offswitch);
+      this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-    let offswitch = new PopupMenu.PopupSwitchMenuItem("Tint", overlay.active);
+      offswitch.connect(
+        "toggled",
+        Lang.bind(this, function (_object, value) {
+          // We will just change the text content of the label
+          if (value) {
+            tinter.show();
+          } else {
+            tinter.hide();
+          }
+        })
+      );
 
-    this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-    this.menu.addMenuItem(offswitch);
-    this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+      this._alphaSlider = new Slider.Slider(0);
+      let _alphaLabel = new St.Label({ text: "Brightness" });
+      this._alphaSliderContainer = new PopupMenu.PopupBaseMenuItem({
+        activate: false,
+      });
+      this._alphaSliderContainer.add_child(_alphaLabel);
+      this._alphaSliderContainer.add_child(this._alphaSlider);
+      this.menu.addMenuItem(this._alphaSliderContainer);
 
-    offswitch.connect(
-      "toggled",
-      Lang.bind(this, function (_object, value) {
-        // We will just change the text content of the label
-        if (value) {
-          tinter.show();
-        } else {
-          tinter.hide();
-        }
-      })
-    );
+      this._alphaSlider.connect(
+        "notify::value",
+        Lang.bind(this, this._setBrightness)
+      );
 
-    this._alphaSlider = new Slider.Slider(0);
-    let _alphaLabel = new St.Label({ text: "Brightness" });
-    this._alphaSliderContainer = new PopupMenu.PopupBaseMenuItem({
-      activate: false,
-    });
-    this._alphaSliderContainer.add_child(_alphaLabel);
-    this._alphaSliderContainer.add_child(this._alphaSlider);
-    this.menu.addMenuItem(this._alphaSliderContainer);
+      this._getBrightness();
+    }
 
-    this._alphaSlider.connect(
-      "notify::value",
-      Lang.bind(this, this._setBrightness)
-    );
+    _getBrightness() {
+      this._alphaSlider._setCurrentValue(
+        this._alphaSlider,
+        (overlay["brightness"] - 64) / 63
+      );
+    }
 
-    this._getBrightness();
-  },
-
-  _getBrightness: function () {
-    this._alphaSlider._setCurrentValue(
-      this._alphaSlider,
-      (overlay["brightness"] - 64) / 63
-    );
-  },
-
-  _setBrightness: function () {
-    overlay["brightness"] = 64 + this._alphaSlider._getCurrentValue() * 63;
-    tinter.setOverlayBrightness();
-  },
-});
+    _setBrightness() {
+      overlay["brightness"] = 64 + this._alphaSlider._getCurrentValue() * 63;
+      tinter.setOverlayBrightness();
+    }
+  }
+);
 
 function constructor() {}
 
