@@ -1,5 +1,9 @@
 # Alpha Tint Changelog
 
+## 6.0.0
+
+- Make compatible with GNOME Shell 45
+
 ## 5.0.0
 
 - Make compatible with latest shell (GNOME 43 and GNOME 44)
