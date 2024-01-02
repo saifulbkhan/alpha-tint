@@ -85,10 +85,10 @@ export default class AlphaTinter extends Extension {
       let [flag, data] = this._file.load_contents(null);
 
       if (flag) {
-        const ByteArray = imports.byteArray;
+        const textDecoder = new TextDecoder();
         let prepData =
           data instanceof Uint8Array
-            ? ByteArray.toString(data)
+            ? textDecoder.decode(data)
             : data.toString();
         overlay = JSON.parse(prepData);
       }
