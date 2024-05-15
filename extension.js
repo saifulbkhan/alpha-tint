@@ -124,18 +124,14 @@ const MenuButton = GObject.registerClass(
     // Constructor
     _init() {
       super._init(1, "AlphaTintMenu", false);
-      let box = new St.BoxLayout();
       let icon = new St.Icon({
         icon_name: "display-brightness-symbolic",
         style_class: "system-status-icon",
       });
 
-      // We add the icon, the label and a arrow icon to the box
-      box.add(icon);
-
-      // We add the box to the button
+      // We add the icon to the button
       // It will be showed in the Top Panel
-      this.add_child(box);
+      this.add_child(icon);
 
       let popupMenuExpander = new PopupMenu.PopupSubMenuMenuItem(
         "PopupSubMenuMenuItem"
@@ -143,13 +139,7 @@ const MenuButton = GObject.registerClass(
 
       // This is an example of PopupMenuItem, a menu item. We will use this to add as a submenu
       let submenu = new PopupMenu.PopupMenuItem("PopupMenuItem");
-
-      // A new label
-      let label = new St.Label({ text: "Item 1" });
-
-      // Add the label and submenu to the menu expander
       popupMenuExpander.menu.addMenuItem(submenu);
-      popupMenuExpander.menu.box.add(label);
 
       let tintSwitch = new PopupMenu.PopupSwitchMenuItem(
         "Tint",
